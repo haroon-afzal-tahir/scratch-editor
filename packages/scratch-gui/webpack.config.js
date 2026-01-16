@@ -122,7 +122,48 @@ const distConfig = baseConfig.clone()
             path: path.resolve(__dirname, 'dist')
         }
     })
-    .addExternals(['react', 'react-dom', 'redux', 'react-redux'])
+    .addExternals([
+        // Use function-based externals to handle all react-related imports
+        function({ request }, callback) {
+            // Handle react and all its subpaths (jsx-runtime, jsx-dev-runtime, etc.)
+            if (request === 'react' || request.startsWith('react/')) {
+                return callback(null, {
+                    commonjs: request,
+                    commonjs2: request,
+                    amd: request,
+                    root: 'React'
+                });
+            }
+            // Handle react-dom and all its subpaths
+            if (request === 'react-dom' || request.startsWith('react-dom/')) {
+                return callback(null, {
+                    commonjs: request,
+                    commonjs2: request,
+                    amd: request,
+                    root: 'ReactDOM'
+                });
+            }
+            // Handle redux
+            if (request === 'redux') {
+                return callback(null, {
+                    commonjs: 'redux',
+                    commonjs2: 'redux',
+                    amd: 'redux',
+                    root: 'Redux'
+                });
+            }
+            // Handle react-redux
+            if (request === 'react-redux') {
+                return callback(null, {
+                    commonjs: 'react-redux',
+                    commonjs2: 'react-redux',
+                    amd: 'react-redux',
+                    root: 'ReactRedux'
+                });
+            }
+            callback();
+        }
+    ])
     .addPlugin(
         new CopyWebpackPlugin({
             patterns: [
