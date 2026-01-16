@@ -40,5 +40,10 @@
     "husky": "8.0.3",
     "npm": "10.9.4",
     "ts-node": "10.9.2"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "redux": "^4.2.1"
   }
 }
