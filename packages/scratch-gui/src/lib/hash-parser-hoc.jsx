@@ -22,21 +22,29 @@ const HashParserHOC = function (WrappedComponent) {
             ]);
         }
         componentDidMount () {
-            window.addEventListener('hashchange', this.handleHashChange);
-            this.handleHashChange();
+            if (typeof window !== 'undefined') {
+                window.addEventListener('hashchange', this.handleHashChange);
+                this.handleHashChange();
+            }
         }
         componentDidUpdate (prevProps) {
             // if we are newly fetching a non-hash project...
             if (this.props.isFetchingWithoutId && !prevProps.isFetchingWithoutId) {
                 // ...clear the hash from the url
-                history.pushState('new-project', 'new-project',
-                    window.location.pathname + window.location.search);
+                if (typeof history !== 'undefined' && typeof window !== 'undefined') {
+                    // Use object for Next.js App Router compatibility
+                    history.pushState({__scratch: 'new-project'}, '',
+                        window.location.pathname + window.location.search);
+                }
             }
         }
         componentWillUnmount () {
-            window.removeEventListener('hashchange', this.handleHashChange);
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('hashchange', this.handleHashChange);
+            }
         }
         handleHashChange () {
+            if (typeof window === 'undefined') return;
             const hashMatch = window.location.hash.match(/#(\d+)/);
             const hashProjectId = hashMatch === null ? defaultProjectId : hashMatch[1];
             this.props.setProjectId(hashProjectId.toString());
