@@ -7,6 +7,40 @@ import PropTypes from 'prop-types';
 import topBlock from './top-block.svg';
 import middleBlock from './middle-block.svg';
 import bottomBlock from './bottom-block.svg';
+
+/**
+ * Simple hash function (djb2 algorithm) to generate consistent keys from strings
+ * @param {string} str - Input string to hash
+ * @returns {string} - Hash string
+ */
+const hashString = str => {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash) + str.charCodeAt(i);
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+};
+
+/**
+ * Generate a consistent key for a loader message based on its properties
+ * @param {object} messageObj - The message object
+ * @param {number} index - The index in the messages array
+ * @returns {string} - A consistent, unique key
+ */
+const generateLoaderMsgKey = (messageObj, index) => {
+    const parts = [`idx-${index}`];
+
+    if (messageObj.message?.props?.id) {
+        parts.push(`id-${messageObj.message.props.id}`);
+    }
+    if (messageObj.message?.props?.defaultMessage) {
+        parts.push(`msg-${messageObj.message.props.defaultMessage.slice(0, 20)}`);
+    }
+    if (messageObj.weight) parts.push(`weight-${messageObj.weight}`);
+
+    return `loader-msg-${hashString(parts.join('|'))}`;
+};
 const messages = [
     {
         message: (
@@ -178,7 +212,7 @@ class LoaderComponent extends React.Component {
                             {messages.map((m, i) => (
                                 <div
                                     className={styles.message}
-                                    key={`loader-msg-${i}`}
+                                    key={generateLoaderMsgKey(m, i)}
                                 >
                                     {m.message}
                                 </div>

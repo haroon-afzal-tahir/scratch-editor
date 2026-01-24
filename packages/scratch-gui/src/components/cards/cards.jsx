@@ -18,6 +18,58 @@ import closeIcon from './icon--close.svg';
 import {translateVideo} from '../../lib/libraries/decks/translate-video.js';
 import {translateImage} from '../../lib/libraries/decks/translate-image.js';
 
+/**
+ * Simple hash function (djb2 algorithm) to generate consistent keys from strings
+ * @param {string} str - Input string to hash
+ * @returns {string} - Hash string
+ */
+const hashString = str => {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash) + str.charCodeAt(i);
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+};
+
+/**
+ * Generate a consistent key for pip step
+ * @param {number} index - The index
+ * @param {number} totalSteps - Total number of steps
+ * @returns {string} - A consistent, unique key
+ */
+const generatePipKey = (index, totalSteps) => {
+    return `pip-${hashString(`step-${index}-of-${totalSteps}`)}`;
+};
+
+/**
+ * Generate a consistent key for deck preview
+ * @param {string} id - The deck ID
+ * @param {string} name - The deck name
+ * @param {number} index - The index
+ * @returns {string} - A consistent, unique key
+ */
+const generateDeckKey = (id, name, index) => {
+    const parts = [`idx-${index}`];
+    if (id) parts.push(`id-${id}`);
+    if (name) parts.push(`name-${name}`);
+    return `deck-${hashString(parts.join('|'))}`;
+};
+
+/**
+ * Generate a consistent key for resource preview
+ * @param {string} id - The resource ID
+ * @param {string} name - The resource name
+ * @param {number} index - The index
+ * @returns {string} - A consistent, unique key
+ */
+const generateResourceKey = (id, name, index) => {
+    const parts = [`idx-${index}`];
+    if (id) parts.push(`id-${id}`);
+    if (name) parts.push(`name-${name}`);
+    return `resource-${hashString(parts.join('|'))}`;
+};
+
 const CardHeader = ({onCloseCards, onShrinkExpandCards, onShowAll, totalSteps, step, expanded}) => (
     <div className={expanded ? styles.headerButtons : classNames(styles.headerButtons, styles.headerButtonsHidden)}>
         <div
@@ -40,7 +92,7 @@ const CardHeader = ({onCloseCards, onShrinkExpandCards, onShowAll, totalSteps, s
                     .map((_, i) => (
                         <div
                             className={i === step ? styles.activeStepPip : styles.inactiveStepPip}
-                            key={`pip-step-${i}`}
+                            key={generatePipKey(i, totalSteps)}
                         />
                     ))}
             </div>
@@ -227,10 +279,10 @@ const PreviewsStep = ({deckIds, content, onActivateDeckFactory, onShowAll}) => (
             />
         </div>
         <div className={styles.decks}>
-            {deckIds.slice(0, 2).map(id => (
+            {deckIds.slice(0, 2).map((id, idx) => (
                 <div
                     className={styles.deck}
-                    key={`deck-preview-${id}`}
+                    key={generateDeckKey(id, content[id]?.name, idx)}
                     onClick={onActivateDeckFactory(id)}
                 >
                     <img
@@ -286,10 +338,10 @@ const PreviewExternalStep = ({externalResources, onShowAll}) => (
         </div>
         <div className={styles.resources}>
             {Object.keys(externalResources).slice(0, 2)
-                .map(id => (
+                .map((id, idx) => (
                     <a
                         className={styles.resource}
-                        key={`resource-preview-${id}`}
+                        key={generateResourceKey(id, externalResources[id]?.name, idx)}
                         href={externalResources[id].url}
                         target="_blank"
                         rel="noopener noreferrer"

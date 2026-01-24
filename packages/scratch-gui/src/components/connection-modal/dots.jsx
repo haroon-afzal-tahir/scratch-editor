@@ -5,6 +5,30 @@ import classNames from 'classnames';
 import Box from '../box/box.jsx';
 import styles from './connection-modal.css';
 
+/**
+ * Simple hash function (djb2 algorithm) to generate consistent keys from strings
+ * @param {string} str - Input string to hash
+ * @returns {string} - Hash string
+ */
+const hashString = str => {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash) + str.charCodeAt(i);
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+};
+
+/**
+ * Generate a consistent key for a dot based on its position and total
+ * @param {number} index - The dot index
+ * @param {number} total - Total number of dots
+ * @returns {string} - A consistent, unique key
+ */
+const generateDotKey = (index, total) => {
+    return `dot-${hashString(`pos-${index}-of-${total}`)}`;
+};
+
 const Dots = props => (
     <Box
         className={classNames(
@@ -28,7 +52,7 @@ const Dots = props => (
                     if (props.success) type = 'success';
                     if (props.error) type = 'error';
                     return (<Dot
-                        key={`dot-${i}`}
+                        key={generateDotKey(i, props.total)}
                         type={type}
                     />);
                 })}

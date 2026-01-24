@@ -8,6 +8,40 @@ import bindAll from 'lodash.bindall';
 import bowser from 'bowser';
 import React from 'react';
 
+/**
+ * Simple hash function (djb2 algorithm) to generate consistent keys from strings
+ * @param {string} str - Input string to hash
+ * @returns {string} - Hash string
+ */
+const hashString = str => {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash) + str.charCodeAt(i);
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+};
+
+/**
+ * Generate a consistent key for about menu item based on its properties
+ * @param {object} itemProps - The menu item properties
+ * @param {number} index - The index in the items array
+ * @returns {string} - A consistent, unique key
+ */
+const generateAboutMenuKey = (itemProps, index) => {
+    const parts = [`idx-${index}`];
+
+    if (itemProps.title) {
+        const titleStr = typeof itemProps.title === 'string'
+            ? itemProps.title
+            : (itemProps.title.props?.defaultMessage || itemProps.title.props?.id || 'item');
+        parts.push(`title-${titleStr.slice(0, 30)}`);
+    }
+    if (itemProps.onClick?.name) parts.push(`onClick-${itemProps.onClick.name}`);
+
+    return `about-menu-${hashString(parts.join('|'))}`;
+};
+
 import VM from '@scratch/scratch-vm';
 
 import Box from '../box/box.jsx';
@@ -366,7 +400,7 @@ class MenuBar extends React.Component {
                     {
                         onClickAbout.map((itemProps, idx) => (
                             <MenuItem
-                                key={`about-menu-${idx}`}
+                                key={generateAboutMenuKey(itemProps, idx)}
                                 isRtl={this.props.isRtl}
                                 onClick={this.wrapAboutMenuCallback(itemProps.onClick)}
                             >

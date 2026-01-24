@@ -13,6 +13,36 @@ import closeIcon from './icons/icon--close.svg';
 import prevIcon from './icons/icon--prev.svg';
 import nextIcon from './icons/icon--next.svg';
 
+/**
+ * Simple hash function (djb2 algorithm) to generate consistent keys from strings
+ * @param {string} str - Input string to hash
+ * @returns {string} - Hash string
+ */
+const hashString = str => {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash) + str.charCodeAt(i);
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+};
+
+/**
+ * Generate a consistent key for a debug section based on its properties
+ * @param {object} section - The section object
+ * @param {number} index - The index in the sections array
+ * @returns {string} - A consistent, unique key
+ */
+const generateSectionKey = (section, index) => {
+    const parts = [`idx-${index}`];
+
+    if (section.id) parts.push(`id-${section.id}`);
+    if (section.title?.id) parts.push(`title-${section.title.id}`);
+    if (section.image) parts.push(`img-${section.image.slice(-20)}`);
+
+    return `section-${hashString(parts.join('|'))}`;
+};
+
 const messages = defineMessages({
     title: {
         id: 'gui.debugModal.title',
@@ -106,7 +136,7 @@ const DebugModal = ({isOpen, onClose = () => {}}) => {
                 <div className={styles.topicList}>
                     {sections.map((section, index) => (
                         <div
-                            key={`section-${section.id || index}`}
+                            key={generateSectionKey(section, index)}
                             className={classNames(styles.topicItem, {
                                 [styles.active]: selectedTopicIndex === index
                             })}

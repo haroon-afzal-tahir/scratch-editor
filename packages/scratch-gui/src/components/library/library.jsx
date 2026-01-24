@@ -20,6 +20,72 @@ import {getLocalStorageValue, setLocalStorageValue} from '../../lib/local-storag
 
 import styles from './library.css';
 
+/**
+ * Simple hash function (djb2 algorithm) to generate consistent keys from strings
+ * @param {string} str - Input string to hash
+ * @returns {string} - Hash string
+ */
+const hashString = str => {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash) + str.charCodeAt(i);
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+};
+
+/**
+ * Generate a consistent key for library data based on its properties
+ * @param {object} data - The library item data
+ * @returns {string} - A consistent, unique key
+ */
+const generateLibraryKey = data => {
+    const parts = [];
+
+    // Include various identifying properties
+    if (typeof data.name === 'string') {
+        parts.push(`name-${data.name}`);
+    } else if (data.name && data.name.props) {
+        // For React elements like FormattedMessage
+        if (data.name.props.id) parts.push(`msgId-${data.name.props.id}`);
+        if (data.name.props.defaultMessage) {
+            parts.push(`msg-${data.name.props.defaultMessage.slice(0, 30)}`);
+        }
+    }
+
+    if (data.extensionId) parts.push(`ext-${data.extensionId}`);
+    if (data.rawURL) parts.push(`url-${data.rawURL}`);
+    if (data.md5) parts.push(`md5-${data.md5}`);
+    if (data.md5ext) parts.push(`md5ext-${data.md5ext}`);
+    if (data.assetId) parts.push(`asset-${data.assetId}`);
+
+    // If we have parts, hash them; otherwise use a fallback
+    if (parts.length > 0) {
+        return `lib-${hashString(parts.join('|'))}`;
+    }
+
+    // Last resort: stringify the whole object
+    return `lib-${hashString(JSON.stringify(data))}`;
+};
+
+/**
+ * Generate a consistent key for tag button based on its properties
+ * @param {object} tagProps - The tag properties
+ * @param {number} index - The index in the tags array
+ * @returns {string} - A consistent, unique key
+ */
+const generateTagKey = (tagProps, index) => {
+    const parts = [`idx-${index}`];
+
+    if (tagProps.tag) parts.push(`tag-${tagProps.tag}`);
+    if (tagProps.intlLabel?.id) parts.push(`intl-${tagProps.intlLabel.id}`);
+    if (tagProps.intlLabel?.defaultMessage) {
+        parts.push(`msg-${tagProps.intlLabel.defaultMessage.slice(0, 20)}`);
+    }
+
+    return `tag-${hashString(parts.join('|'))}`;
+};
+
 const localStorageAvailable =
     'localStorage' in window && window.localStorage !== null;
 
@@ -335,26 +401,8 @@ class LibraryComponent extends React.Component {
         ));
     }
     constructKey (data) {
-        // If name is a string, use it as the key
-        if (typeof data.name === 'string') {
-            return data.name;
-        }
-        // If name is a React element (e.g., FormattedMessage), try to extract its id
-        if (data.name && data.name.props && data.name.props.id) {
-            return data.name.props.id;
-        }
-        // Fall back to other unique identifiers
-        if (data.extensionId) {
-            return data.extensionId;
-        }
-        if (data.rawURL) {
-            return data.rawURL;
-        }
-        if (data.md5) {
-            return data.md5;
-        }
-        // Last resort: use JSON stringified object (this shouldn't normally happen)
-        return JSON.stringify(data.name) || 'unknown';
+        // Use hash-based key generation for consistent, unique keys
+        return generateLibraryKey(data);
     }
     scrollToTop () {
         this.filteredDataRef.scrollTop = 0;
@@ -456,7 +504,7 @@ class LibraryComponent extends React.Component {
                                             styles.tagButton,
                                             tagProps.className
                                         )}
-                                        key={`tag-button-${tagProps.tag || tagProps.intlLabel?.id || id}`}
+                                        key={generateTagKey(tagProps, id)}
                                         onClick={this.handleTagClick}
                                         {...tagProps}
                                     />
