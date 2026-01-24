@@ -106,7 +106,7 @@ const DebugModal = ({isOpen, onClose = () => {}}) => {
                 <div className={styles.topicList}>
                     {sections.map((section, index) => (
                         <div
-                            key={index}
+                            key={`section-${section.id || index}`}
                             className={classNames(styles.topicItem, {
                                 [styles.active]: selectedTopicIndex === index
                             })}

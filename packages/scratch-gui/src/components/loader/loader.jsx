@@ -178,7 +178,7 @@ class LoaderComponent extends React.Component {
                             {messages.map((m, i) => (
                                 <div
                                     className={styles.message}
-                                    key={i}
+                                    key={`loader-msg-${i}`}
                                 >
                                     {m.message}
                                 </div>

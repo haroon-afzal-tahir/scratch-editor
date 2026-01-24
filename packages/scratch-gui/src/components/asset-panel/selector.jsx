@@ -63,7 +63,7 @@ const Selector = props => {
                     <SortableAsset
                         id={item.name}
                         index={isRelevantDrag ? ordering.indexOf(index) : index}
-                        key={item.name}
+                        key={`asset-${index}-${typeof item.name === 'string' ? item.name : index}`}
                         onAddSortable={onAddSortable}
                         onRemoveSortable={onRemoveSortable}
                     >

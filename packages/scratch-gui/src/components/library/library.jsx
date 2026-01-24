@@ -335,7 +335,26 @@ class LibraryComponent extends React.Component {
         ));
     }
     constructKey (data) {
-        return typeof data.name === 'string' ? data.name : data.rawURL;
+        // If name is a string, use it as the key
+        if (typeof data.name === 'string') {
+            return data.name;
+        }
+        // If name is a React element (e.g., FormattedMessage), try to extract its id
+        if (data.name && data.name.props && data.name.props.id) {
+            return data.name.props.id;
+        }
+        // Fall back to other unique identifiers
+        if (data.extensionId) {
+            return data.extensionId;
+        }
+        if (data.rawURL) {
+            return data.rawURL;
+        }
+        if (data.md5) {
+            return data.md5;
+        }
+        // Last resort: use JSON stringified object (this shouldn't normally happen)
+        return JSON.stringify(data.name) || 'unknown';
     }
     scrollToTop () {
         this.filteredDataRef.scrollTop = 0;
@@ -437,7 +456,7 @@ class LibraryComponent extends React.Component {
                                             styles.tagButton,
                                             tagProps.className
                                         )}
-                                        key={`tag-button-${id}`}
+                                        key={`tag-button-${tagProps.tag || tagProps.intlLabel?.id || id}`}
                                         onClick={this.handleTagClick}
                                         {...tagProps}
                                     />

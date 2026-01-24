@@ -7,6 +7,18 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 const ScratchWebpackConfigBuilder = require('scratch-webpack-configuration');
 
+// Helper to resolve package paths (works with npm, yarn, and pnpm)
+const resolvePackagePath = (packageName, subPath = '') => {
+    try {
+        const packageJsonPath = require.resolve(`${packageName}/package.json`);
+        const packageDir = path.dirname(packageJsonPath);
+        return subPath ? path.join(packageDir, subPath) : packageDir;
+    } catch (e) {
+        // Fallback to relative path for backwards compatibility
+        return path.join(__dirname, '../../node_modules', packageName, subPath);
+    }
+};
+
 // const STATIC_PATH = process.env.STATIC_PATH || '/static';
 
 const commonHtmlWebpackPluginOptions = {
@@ -67,11 +79,11 @@ const baseConfig = new ScratchWebpackConfigBuilder(
     .addPlugin(new CopyWebpackPlugin({
         patterns: [
             {
-                from: '../../node_modules/scratch-blocks/media',
+                from: resolvePackagePath('scratch-blocks', 'media'),
                 to: 'static/blocks-media/default'
             },
             {
-                from: '../../node_modules/scratch-blocks/media',
+                from: resolvePackagePath('scratch-blocks', 'media'),
                 to: 'static/blocks-media/high-contrast'
             },
             {
@@ -82,22 +94,22 @@ const baseConfig = new ScratchWebpackConfigBuilder(
                 force: true
             },
             {
-                context: '../../node_modules/@scratch/scratch-vm/dist/web',
+                context: resolvePackagePath('@scratch/scratch-vm', 'dist/web'),
                 from: 'extension-worker.{js,js.map}',
                 noErrorOnMissing: true
             },
             {
-                context: '../../node_modules/scratch-storage/dist/web',
+                context: resolvePackagePath('scratch-storage', 'dist/web'),
                 from: 'chunks/fetch-worker.*.{js,js.map}',
                 noErrorOnMissing: true
             },
             {
-                context: '../../node_modules/scratch-storage/dist/web',
+                context: resolvePackagePath('scratch-storage', 'dist/web'),
                 from: 'chunks/vendors-*.{js,js.map}',
                 noErrorOnMissing: true
             },
             {
-                from: '../../node_modules/@mediapipe/face_detection',
+                from: resolvePackagePath('@mediapipe/face_detection'),
                 to: 'chunks/mediapipe/face_detection'
             }
         ]

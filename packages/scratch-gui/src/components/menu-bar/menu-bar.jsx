@@ -364,9 +364,9 @@ class MenuBar extends React.Component {
                     onRequestClose={this.props.onRequestCloseAbout}
                 >
                     {
-                        onClickAbout.map(itemProps => (
+                        onClickAbout.map((itemProps, idx) => (
                             <MenuItem
-                                key={itemProps.title}
+                                key={`about-menu-${idx}`}
                                 isRtl={this.props.isRtl}
                                 onClick={this.wrapAboutMenuCallback(itemProps.onClick)}
                             >
