@@ -13,7 +13,7 @@ const resolvePackagePath = (packageName, subPath = '') => {
         const packageJsonPath = require.resolve(`${packageName}/package.json`);
         const packageDir = path.dirname(packageJsonPath);
         return subPath ? path.join(packageDir, subPath) : packageDir;
-    } catch (e) {
+    } catch {
         // Fallback to relative path for backwards compatibility
         return path.join(__dirname, '../../node_modules', packageName, subPath);
     }
@@ -119,6 +119,76 @@ if (!process.env.CI) {
     baseConfig.addPlugin(new webpack.ProgressPlugin());
 }
 
+// Helper function to patch a single webpack rule for classic JSX runtime
+function patchSingleRule(rule) {
+    // Find babel-loader rules (they have use.loader containing 'babel-loader')
+    if (rule.use && Array.isArray(rule.use)) {
+        return {
+            ...rule,
+            use: rule.use.map(loader => {
+                if (loader.loader && loader.loader.includes('babel-loader')) {
+                    const newOptions = {...loader.options};
+                    if (newOptions.presets) {
+                        newOptions.presets = newOptions.presets.map(preset => {
+                            if (Array.isArray(preset) && preset[0]) {
+                                const presetName = typeof preset[0] === 'string' ? preset[0] : '';
+                                if (presetName.includes('preset-react') || presetName.includes('@babel/react')) {
+                                    return [preset[0], {...(preset[1] || {}), runtime: 'classic'}];
+                                }
+                            }
+                            if (typeof preset === 'string' &&
+                                (preset.includes('preset-react') || preset.includes('@babel/react'))) {
+                                return [preset, {runtime: 'classic'}];
+                            }
+                            return preset;
+                        });
+                    }
+                    return {...loader, options: newOptions};
+                }
+                return loader;
+            })
+        };
+    }
+    // Handle single loader object (loader property directly on rule)
+    if (rule.loader && rule.loader.includes('babel-loader')) {
+        const newOptions = {...(rule.options || {})};
+        if (newOptions.presets) {
+            newOptions.presets = newOptions.presets.map(preset => {
+                if (Array.isArray(preset) && preset[0]) {
+                    const presetName = typeof preset[0] === 'string' ? preset[0] : '';
+                    if (presetName.includes('preset-react') || presetName.includes('@babel/react')) {
+                        return [preset[0], {...(preset[1] || {}), runtime: 'classic'}];
+                    }
+                }
+                if (typeof preset === 'string' &&
+                    (preset.includes('preset-react') || preset.includes('@babel/react'))) {
+                    return [preset, {runtime: 'classic'}];
+                }
+                return preset;
+            });
+        }
+        return {...rule, options: newOptions};
+    }
+    return rule;
+}
+
+// Helper function to patch babel-loader to use classic JSX runtime
+// This is necessary because the UMD builds expect React.createElement, not jsx-runtime
+// Note: This doesn't fix pre-compiled dependencies that already use jsx-runtime.
+// For those, we provide jsx/jsxs on window.React in ScratchGUIClient.tsx
+function patchBabelForClassicJSX(webpackConfig) {
+    webpackConfig.module.rules = webpackConfig.module.rules.map(rule => {
+        if (rule.oneOf) {
+            return {
+                ...rule,
+                oneOf: rule.oneOf.map(innerRule => patchSingleRule(innerRule))
+            };
+        }
+        return patchSingleRule(rule);
+    });
+    return webpackConfig;
+}
+
 // build the shipping library in `dist/`
 const distConfig = baseConfig.clone()
     .merge({
@@ -136,7 +206,7 @@ const distConfig = baseConfig.clone()
     })
     .addExternals([
         // Use function-based externals to handle all react-related imports
-        function({ request }, callback) {
+        function ({request}, callback) {
             // Handle react and all its subpaths (jsx-runtime, jsx-dev-runtime, etc.)
             if (request === 'react' || request.startsWith('react/')) {
                 return callback(null, {
@@ -198,6 +268,11 @@ const distStandaloneConfig = baseConfig.clone()
             path: path.resolve(__dirname, 'dist')
         }
     });
+
+// Apply classic JSX runtime to all builds
+// This ensures compatibility when loaded as UMD modules with external React
+const distWebpackConfig = patchBabelForClassicJSX(distConfig.get());
+const standaloneWebpackConfig = patchBabelForClassicJSX(distStandaloneConfig.get());
 
 // build the examples and debugging tools in `build/`
 const buildConfig = baseConfig.clone()
@@ -268,6 +343,9 @@ const buildConfig = baseConfig.clone()
         ]
     }));
 
+// Apply classic JSX runtime to build config as well for consistency
+const devWebpackConfig = patchBabelForClassicJSX(buildConfig.get());
+
 // Skip building `dist/` unless explicitly requested
 // It roughly doubles build time and isn't needed for `scratch-gui` development
 // If you need non-production `dist/` for local dev, such as for `scratch-www` work, you can run something like:
@@ -276,9 +354,9 @@ const buildDist = process.env.NODE_ENV === 'production' || process.env.BUILD_MOD
 
 let config;
 switch (process.env.BUILD_TYPE) {
-case 'dist': config = distConfig.get(); break;
-case 'dist-standalone': config = distStandaloneConfig.get(); break;
-default: config = buildConfig.get(); break;
+case 'dist': config = distWebpackConfig; break;
+case 'dist-standalone': config = standaloneWebpackConfig; break;
+default: config = devWebpackConfig; break;
 }
 
-module.exports = buildDist ? config : buildConfig.get();
+module.exports = buildDist ? config : devWebpackConfig;
