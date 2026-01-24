@@ -3,43 +3,9 @@ import React from 'react';
 import classNames from 'classnames';
 import bindAll from 'lodash.bindall';
 import ReactTooltip from 'react-tooltip';
+import {keyGenerators} from '../../lib/unique-key.js';
 
 import styles from './action-menu.css';
-
-/**
- * Simple hash function (djb2 algorithm) to generate consistent keys from strings
- * @param {string} str - Input string to hash
- * @returns {string} - Hash string
- */
-const hashString = str => {
-    let hash = 5381;
-    for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) + hash) + str.charCodeAt(i);
-        hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash).toString(36);
-};
-
-/**
- * Generate a consistent key for menu button based on its properties
- * @param {object} button - The button properties
- * @param {number} index - The index in the buttons array
- * @param {string} parentId - The parent tooltip ID
- * @returns {string} - A consistent, unique key
- */
-const generateButtonKey = (button, index, parentId) => {
-    const parts = [`idx-${index}`, `parent-${parentId}`];
-
-    if (button.title) {
-        const titleStr = typeof button.title === 'string'
-            ? button.title
-            : (button.title.props?.defaultMessage || button.title.props?.id || 'btn');
-        parts.push(`title-${titleStr.slice(0, 30)}`);
-    }
-    if (button.img) parts.push(`img-${button.img.slice(-20)}`);
-
-    return `action-btn-${hashString(parts.join('|'))}`;
-};
 
 const CLOSE_DELAY = 300; // ms
 
@@ -184,7 +150,7 @@ class ActionMenu extends React.Component {
                             const hasFileInput = fileInput;
                             const tooltipId = `${this.mainTooltipId}-${title}`;
                             return (
-                                <li key={generateButtonKey(buttonProps, keyId, this.mainTooltipId)}>
+                                <li key={keyGenerators.actionButton(buttonProps, keyId, this.mainTooltipId)}>
                                     <button
                                         aria-label={title}
                                         className={classNames(styles.button, styles.moreButton, {

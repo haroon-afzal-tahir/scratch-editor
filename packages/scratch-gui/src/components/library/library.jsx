@@ -17,74 +17,9 @@ import {legacyConfig} from '../../legacy-config';
 import Spinner from '../spinner/spinner.jsx';
 import {CATEGORIES} from '../../../src/lib/libraries/decks/index.jsx';
 import {getLocalStorageValue, setLocalStorageValue} from '../../lib/local-storage.js';
+import {keyGenerators, createKeyRegistry} from '../../lib/unique-key.js';
 
 import styles from './library.css';
-
-/**
- * Simple hash function (djb2 algorithm) to generate consistent keys from strings
- * @param {string} str - Input string to hash
- * @returns {string} - Hash string
- */
-const hashString = str => {
-    let hash = 5381;
-    for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) + hash) + str.charCodeAt(i);
-        hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash).toString(36);
-};
-
-/**
- * Generate a consistent key for library data based on its properties
- * @param {object} data - The library item data
- * @returns {string} - A consistent, unique key
- */
-const generateLibraryKey = data => {
-    const parts = [];
-
-    // Include various identifying properties
-    if (typeof data.name === 'string') {
-        parts.push(`name-${data.name}`);
-    } else if (data.name && data.name.props) {
-        // For React elements like FormattedMessage
-        if (data.name.props.id) parts.push(`msgId-${data.name.props.id}`);
-        if (data.name.props.defaultMessage) {
-            parts.push(`msg-${data.name.props.defaultMessage.slice(0, 30)}`);
-        }
-    }
-
-    if (data.extensionId) parts.push(`ext-${data.extensionId}`);
-    if (data.rawURL) parts.push(`url-${data.rawURL}`);
-    if (data.md5) parts.push(`md5-${data.md5}`);
-    if (data.md5ext) parts.push(`md5ext-${data.md5ext}`);
-    if (data.assetId) parts.push(`asset-${data.assetId}`);
-
-    // If we have parts, hash them; otherwise use a fallback
-    if (parts.length > 0) {
-        return `lib-${hashString(parts.join('|'))}`;
-    }
-
-    // Last resort: stringify the whole object
-    return `lib-${hashString(JSON.stringify(data))}`;
-};
-
-/**
- * Generate a consistent key for tag button based on its properties
- * @param {object} tagProps - The tag properties
- * @param {number} index - The index in the tags array
- * @returns {string} - A consistent, unique key
- */
-const generateTagKey = (tagProps, index) => {
-    const parts = [`idx-${index}`];
-
-    if (tagProps.tag) parts.push(`tag-${tagProps.tag}`);
-    if (tagProps.intlLabel?.id) parts.push(`intl-${tagProps.intlLabel.id}`);
-    if (tagProps.intlLabel?.defaultMessage) {
-        parts.push(`msg-${tagProps.intlLabel.defaultMessage.slice(0, 20)}`);
-    }
-
-    return `tag-${hashString(parts.join('|'))}`;
-};
 
 const localStorageAvailable =
     'localStorage' in window && window.localStorage !== null;
@@ -207,6 +142,7 @@ class LibraryComponent extends React.Component {
     constructor (props) {
         super(props);
         bindAll(this, [
+            'findItemByKey',
             'handleClose',
             'handleFilterChange',
             'handleFilterClear',
@@ -295,10 +231,15 @@ class LibraryComponent extends React.Component {
             this.animationFrameId = null;
         });
     }
+    findItemByKey (id) {
+        const data = this.getFilteredData();
+        const index = data.findIndex((item, idx) => this.constructKey(item, idx) === id);
+        return index >= 0 ? data[index] : null;
+    }
     handleSelect (id) {
-        const selectedItem = this.getFilteredData().find(item => this.constructKey(item) === id);
+        const selectedItem = this.findItemByKey(id);
 
-        if (this.state.shouldShowFaceSensingCallout && selectedItem.extensionId === 'faceSensing') {
+        if (selectedItem && this.state.shouldShowFaceSensingCallout && selectedItem.extensionId === 'faceSensing') {
             if (!this.driver) {
                 return;
             }
@@ -310,7 +251,9 @@ class LibraryComponent extends React.Component {
         }
 
         this.handleClose();
-        this.props.onItemSelected(selectedItem);
+        if (selectedItem) {
+            this.props.onItemSelected(selectedItem);
+        }
     }
     handleClose () {
         this.props.onRequestClose();
@@ -322,8 +265,10 @@ class LibraryComponent extends React.Component {
                 selectedTag: tag.toLowerCase()
             });
         } else {
-            this.props.onItemMouseLeave((this.getFilteredData()
-                .find(item => this.constructKey(item) === this.state.playingItem)));
+            const item = this.findItemByKey(this.state.playingItem);
+            if (item) {
+                this.props.onItemMouseLeave(item);
+            }
             this.setState({
                 filterQuery: '',
                 playingItem: null,
@@ -334,8 +279,10 @@ class LibraryComponent extends React.Component {
     handleMouseEnter (id) {
         // don't restart if mouse over already playing item
         if (this.props.onItemMouseEnter && this.state.playingItem !== id) {
-            this.props.onItemMouseEnter(this.getFilteredData()
-                .find(item => this.constructKey(item) === id));
+            const item = this.findItemByKey(id);
+            if (item) {
+                this.props.onItemMouseEnter(item);
+            }
             this.setState({
                 playingItem: id
             });
@@ -343,8 +290,10 @@ class LibraryComponent extends React.Component {
     }
     handleMouseLeave (id) {
         if (this.props.onItemMouseLeave) {
-            this.props.onItemMouseLeave(this.getFilteredData()
-                .find(item => this.constructKey(item) === id));
+            const item = this.findItemByKey(id);
+            if (item) {
+                this.props.onItemMouseLeave(item);
+            }
             this.setState({
                 playingItem: null
             });
@@ -364,8 +313,10 @@ class LibraryComponent extends React.Component {
                 selectedTag: ALL_TAG.tag
             });
         } else {
-            this.props.onItemMouseLeave(this.getFilteredData()
-                .find(item => this.constructKey(item) === this.state.playingItem));
+            const item = this.findItemByKey(this.state.playingItem);
+            if (item) {
+                this.props.onItemMouseLeave(item);
+            }
             this.setState({
                 filterQuery: event.target.value,
                 playingItem: null,
@@ -400,9 +351,9 @@ class LibraryComponent extends React.Component {
                 .indexOf(this.state.selectedTag) !== -1
         ));
     }
-    constructKey (data) {
-        // Use hash-based key generation for consistent, unique keys
-        return generateLibraryKey(data);
+    constructKey (data, index) {
+        // Use the unique key generator with index to ensure uniqueness
+        return keyGenerators.library(data, index);
     }
     scrollToTop () {
         this.filteredDataRef.scrollTop = 0;
@@ -410,8 +361,8 @@ class LibraryComponent extends React.Component {
     setFilteredDataRef (ref) {
         this.filteredDataRef = ref;
     }
-    renderElement (data) {
-        const key = this.constructKey(data);
+    renderElement (data, index) {
+        const key = this.constructKey(data, index);
         const icons = getItemIcons(data);
         return (<LibraryItem
             bluetoothRequired={data.bluetoothRequired}
@@ -437,22 +388,22 @@ class LibraryComponent extends React.Component {
     }
     renderData (data) {
         if (this.state.selectedTag !== ALL_TAG.tag || !this.props.withCategories) {
-            return data.map(item => this.renderElement(item));
+            return data.map((item, index) => this.renderElement(item, index));
         }
 
         // Object.groupBy is not available on older versions of javascript
-        const dataByCategory = data.reduce((acc, el) => {
+        const dataByCategory = data.reduce((acc, el, idx) => {
             acc[el.category] = acc[el.category] || [];
-            acc[el.category].push(el);
+            acc[el.category].push({item: el, originalIndex: idx});
             return acc;
         }, {});
         const categoriesOrder = Object.values(CATEGORIES);
 
         return Object.entries(dataByCategory)
             .sort(([key1], [key2]) => categoriesOrder.indexOf(key1) - categoriesOrder.indexOf(key2))
-            .map(([key, values]) =>
+            .map(([key, values], catIdx) =>
                 (<div
-                    key={key}
+                    key={`category-${key}-${catIdx}`}
                     className={styles.libraryCategory}
                 >
                     {key === 'undefined' ?
@@ -464,7 +415,7 @@ class LibraryComponent extends React.Component {
                     <div
                         className={styles.libraryCategoryItems}
                     >
-                        {values.map(item => this.renderElement(item))}
+                        {values.map(({item, originalIndex}) => this.renderElement(item, originalIndex))}
                     </div>
                 </div>));
     }
@@ -504,7 +455,7 @@ class LibraryComponent extends React.Component {
                                             styles.tagButton,
                                             tagProps.className
                                         )}
-                                        key={generateTagKey(tagProps, id)}
+                                        key={keyGenerators.tag(tagProps, id)}
                                         onClick={this.handleTagClick}
                                         {...tagProps}
                                     />

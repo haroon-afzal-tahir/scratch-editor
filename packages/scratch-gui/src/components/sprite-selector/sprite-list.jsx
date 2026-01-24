@@ -9,37 +9,9 @@ import SpriteSelectorItem from '../../containers/sprite-selector-item.jsx';
 import SortableHOC from '../../lib/sortable-hoc.jsx';
 import SortableAsset from '../asset-panel/sortable-asset.jsx';
 import ThrottledPropertyHOC from '../../lib/throttled-property-hoc.jsx';
+import {keyGenerators} from '../../lib/unique-key.js';
 
 import styles from './sprite-selector.css';
-
-/**
- * Simple hash function (djb2 algorithm) to generate consistent keys from strings
- * @param {string} str - Input string to hash
- * @returns {string} - Hash string
- */
-const hashString = str => {
-    let hash = 5381;
-    for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) + hash) + str.charCodeAt(i);
-        hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash).toString(36);
-};
-
-/**
- * Generate a consistent key for a sprite based on its properties
- * @param {object} sprite - The sprite object
- * @param {number} index - The index in the sprites array
- * @returns {string} - A consistent, unique key
- */
-const generateSpriteKey = (sprite, index) => {
-    const parts = [`idx-${index}`];
-
-    if (sprite.id) parts.push(`id-${sprite.id}`);
-    if (sprite.name) parts.push(`name-${sprite.name}`);
-
-    return `sprite-${hashString(parts.join('|'))}`;
-};
 
 const ThrottledSpriteSelectorItem = ThrottledPropertyHOC('asset', 500)(SpriteSelectorItem);
 
@@ -103,7 +75,7 @@ const SpriteList = function (props) {
                             className={classNames(styles.spriteWrapper, {
                                 [styles.placeholder]: isSpriteDrag && index === draggingIndex})}
                             index={isSpriteDrag ? ordering.indexOf(index) : index}
-                            key={generateSpriteKey(sprite, index)}
+                            key={keyGenerators.sprite(sprite, index)}
                             onAddSortable={onAddSortable}
                             onRemoveSortable={onRemoveSortable}
                         >

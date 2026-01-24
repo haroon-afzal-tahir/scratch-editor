@@ -7,40 +7,7 @@ import PropTypes from 'prop-types';
 import bindAll from 'lodash.bindall';
 import bowser from 'bowser';
 import React from 'react';
-
-/**
- * Simple hash function (djb2 algorithm) to generate consistent keys from strings
- * @param {string} str - Input string to hash
- * @returns {string} - Hash string
- */
-const hashString = str => {
-    let hash = 5381;
-    for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) + hash) + str.charCodeAt(i);
-        hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash).toString(36);
-};
-
-/**
- * Generate a consistent key for about menu item based on its properties
- * @param {object} itemProps - The menu item properties
- * @param {number} index - The index in the items array
- * @returns {string} - A consistent, unique key
- */
-const generateAboutMenuKey = (itemProps, index) => {
-    const parts = [`idx-${index}`];
-
-    if (itemProps.title) {
-        const titleStr = typeof itemProps.title === 'string'
-            ? itemProps.title
-            : (itemProps.title.props?.defaultMessage || itemProps.title.props?.id || 'item');
-        parts.push(`title-${titleStr.slice(0, 30)}`);
-    }
-    if (itemProps.onClick?.name) parts.push(`onClick-${itemProps.onClick.name}`);
-
-    return `about-menu-${hashString(parts.join('|'))}`;
-};
+import {keyGenerators} from '../../lib/unique-key.js';
 
 import VM from '@scratch/scratch-vm';
 
@@ -400,7 +367,7 @@ class MenuBar extends React.Component {
                     {
                         onClickAbout.map((itemProps, idx) => (
                             <MenuItem
-                                key={generateAboutMenuKey(itemProps, idx)}
+                                key={keyGenerators.menuItem(itemProps, idx)}
                                 isRtl={this.props.isRtl}
                                 onClick={this.wrapAboutMenuCallback(itemProps.onClick)}
                             >
@@ -522,7 +489,7 @@ class MenuBar extends React.Component {
                                     place={this.props.isRtl ? 'left' : 'right'}
                                     onRequestClose={this.props.onRequestCloseFile}
                                 >
-                                    <MenuSection>
+                                    <MenuSection key="new-section">
                                         <MenuItem
                                             isRtl={this.props.isRtl}
                                             onClick={this.handleClickNew}
@@ -531,31 +498,32 @@ class MenuBar extends React.Component {
                                         </MenuItem>
                                     </MenuSection>
                                     {(this.props.canSave || this.props.canCreateCopy || this.props.canRemix) && (
-                                        <MenuSection>
+                                        <MenuSection key="save-section">
                                             {this.props.canSave && (
-                                                <MenuItem onClick={this.handleClickSave}>
+                                                <MenuItem key="save" onClick={this.handleClickSave}>
                                                     {saveNowMessage}
                                                 </MenuItem>
                                             )}
                                             {this.props.canCreateCopy && (
-                                                <MenuItem onClick={this.handleClickSaveAsCopy}>
+                                                <MenuItem key="savecopy" onClick={this.handleClickSaveAsCopy}>
                                                     {createCopyMessage}
                                                 </MenuItem>
                                             )}
                                             {this.props.canRemix && (
-                                                <MenuItem onClick={this.handleClickRemix}>
+                                                <MenuItem key="remix" onClick={this.handleClickRemix}>
                                                     {remixMessage}
                                                 </MenuItem>
                                             )}
                                         </MenuSection>
                                     )}
-                                    <MenuSection>
+                                    <MenuSection key="file-section">
                                         <MenuItem
+                                            key="load"
                                             onClick={this.props.onStartSelectingFileUpload}
                                         >
                                             {this.props.intl.formatMessage(sharedMessages.loadFromComputerTitle)}
                                         </MenuItem>
-                                        <SB3Downloader>{(className, downloadProjectCallback) => (
+                                        <SB3Downloader key="download">{(className, downloadProjectCallback) => (
                                             <MenuItem
                                                 className={className}
                                                 onClick={this.getSaveToComputerHandler(downloadProjectCallback)}
@@ -592,7 +560,7 @@ class MenuBar extends React.Component {
                                 place={this.props.isRtl ? 'left' : 'right'}
                                 onRequestClose={this.props.onRequestCloseEdit}
                             >
-                                <DeletionRestorer>{(handleRestore, {restorable, deletedItem}) => (
+                                <DeletionRestorer key="restore">{(handleRestore, {restorable, deletedItem}) => (
                                     <MenuItem
                                         className={classNames({[styles.disabled]: !restorable})}
                                         onClick={this.handleRestoreOption(handleRestore)}
@@ -600,7 +568,7 @@ class MenuBar extends React.Component {
                                         {this.restoreOptionMessage(deletedItem)}
                                     </MenuItem>
                                 )}</DeletionRestorer>
-                                <MenuSection>
+                                <MenuSection key="turbo-section">
                                     <TurboMode>{(toggleTurboMode, {turboMode}) => (
                                         <MenuItem onClick={toggleTurboMode}>
                                             {turboMode ? (
@@ -643,7 +611,7 @@ class MenuBar extends React.Component {
                                     onRequestClose={this.props.onRequestCloseMode}
                                 >
                                     <MenuSection>
-                                        <MenuItem onClick={this.handleSetMode('NOW')}>
+                                        <MenuItem key="mode-now" onClick={this.handleSetMode('NOW')}>
                                             <span className={classNames({[styles.inactive]: !this.props.modeNow})}>
                                                 {'✓'}
                                             </span>
@@ -654,7 +622,7 @@ class MenuBar extends React.Component {
                                                 id="gui.menuBar.normalMode"
                                             />
                                         </MenuItem>
-                                        <MenuItem onClick={this.handleSetMode('2020')}>
+                                        <MenuItem key="mode-2020" onClick={this.handleSetMode('2020')}>
                                             <span className={classNames({[styles.inactive]: !this.props.mode2020})}>
                                                 {'✓'}
                                             </span>

@@ -7,42 +7,9 @@ import ActionMenu from '../action-menu/action-menu.jsx';
 import SortableAsset from './sortable-asset.jsx';
 import SortableHOC from '../../lib/sortable-hoc.jsx';
 import DragConstants from '../../lib/drag-constants';
+import {keyGenerators} from '../../lib/unique-key.js';
 
 import styles from './selector.css';
-
-/**
- * Simple hash function (djb2 algorithm) to generate consistent keys from strings
- * @param {string} str - Input string to hash
- * @returns {string} - Hash string
- */
-const hashString = str => {
-    let hash = 5381;
-    for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) + hash) + str.charCodeAt(i);
-        hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash).toString(36);
-};
-
-/**
- * Generate a consistent key for an asset based on its properties
- * @param {object} item - The asset item
- * @param {number} index - The index in the items array
- * @returns {string} - A consistent, unique key
- */
-const generateAssetKey = (item, index) => {
-    const parts = [`idx-${index}`];
-
-    if (typeof item.name === 'string') {
-        parts.push(`name-${item.name}`);
-    }
-    if (item.assetId) parts.push(`assetId-${item.assetId}`);
-    if (item.md5) parts.push(`md5-${item.md5}`);
-    if (item.url) parts.push(`url-${item.url.slice(-20)}`);
-    if (item.dragPayload) parts.push(`payload-${item.dragPayload}`);
-
-    return `asset-${hashString(parts.join('|'))}`;
-};
 
 const Selector = props => {
     const {
@@ -97,7 +64,7 @@ const Selector = props => {
                     <SortableAsset
                         id={item.name}
                         index={isRelevantDrag ? ordering.indexOf(index) : index}
-                        key={generateAssetKey(item, index)}
+                        key={keyGenerators.asset(item, index)}
                         onAddSortable={onAddSortable}
                         onRemoveSortable={onRemoveSortable}
                     >

@@ -83,11 +83,12 @@ const SettingsMenu = ({
                 onRequestClose={onRequestClose}
             >
                 <MenuSection>
-                    {canChangeLanguage && <LanguageMenu onRequestCloseSettings={onRequestClose} />}
+                    {canChangeLanguage && <LanguageMenu key="language" onRequestCloseSettings={onRequestClose} />}
                     {canChangeTheme &&
                         // TODO: Consider always showing the theme menu, even if there is a single available theme
                         availableThemesLength > 1 &&
                         <PreferenceMenu
+                            key="theme"
                             open={isThemeMenuOpen}
                             itemsMap={availableThemesMap}
                             onChange={onChangeTheme}
@@ -103,6 +104,7 @@ const SettingsMenu = ({
                             onRequestOpen={onRequestOpenTheme}
                         />}
                     {canChangeColorMode && <PreferenceMenu
+                        key="colormode"
                         open={isColorModeMenuOpen}
                         itemsMap={enabledColorModesMap}
                         onChange={onChangeColorMode}

@@ -69,7 +69,7 @@ const AccountNavComponent = ({
             onRequestClose={onClose}
         >
             {profileUrl ? (
-                <MenuItemContainer href={profileUrl}>
+                <MenuItemContainer key="profile" href={profileUrl}>
                     <FormattedMessage
                         defaultMessage="Profile"
                         description="Text to link to my user profile, in the account navigation menu"
@@ -79,7 +79,7 @@ const AccountNavComponent = ({
             ) : null}
 
             {myStuffUrl ? (
-                <MenuItemContainer href={myStuffUrl}>
+                <MenuItemContainer key="mystuff" href={myStuffUrl}>
                     <FormattedMessage
                         defaultMessage="My Stuff"
                         description="Text to link to list of my projects, in the account navigation menu"
@@ -89,7 +89,7 @@ const AccountNavComponent = ({
             ) : null}
 
             {myClassesUrl ? (
-                <MenuItemContainer href={myClassesUrl}>
+                <MenuItemContainer key="myclasses" href={myClassesUrl}>
                     <FormattedMessage
                         defaultMessage="My Classes"
                         description="Text to link to my classes (if I am a teacher), in the account navigation menu"
@@ -99,7 +99,7 @@ const AccountNavComponent = ({
             ) : null}
 
             {myClassUrl ? (
-                <MenuItemContainer href={myClassUrl}>
+                <MenuItemContainer key="myclass" href={myClassUrl}>
                     <FormattedMessage
                         defaultMessage="My Class"
                         description="Text to link to my class (if I am a student), in the account navigation menu"
@@ -109,7 +109,7 @@ const AccountNavComponent = ({
             ) : null}
 
             {accountSettingsUrl ? (
-                <MenuItemContainer href={accountSettingsUrl}>
+                <MenuItemContainer key="settings" href={accountSettingsUrl}>
                     <FormattedMessage
                         defaultMessage="Account settings"
                         description="Text to link to my account settings, in the account navigation menu"
@@ -119,7 +119,7 @@ const AccountNavComponent = ({
             ) : null}
 
             {onLogOut ? (
-                <MenuSection>
+                <MenuSection key="signout-section">
                     <MenuItemContainer onClick={onLogOut}>
                         <FormattedMessage
                             defaultMessage="Sign out"

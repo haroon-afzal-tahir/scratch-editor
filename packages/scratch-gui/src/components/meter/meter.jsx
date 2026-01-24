@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import {keyGenerators} from '../../lib/unique-key.js';
 import styles from './meter.css';
 
 const Meter = props => {
@@ -38,7 +39,7 @@ const Meter = props => {
                             className={index < nGreen ? styles.green :
                                 (index < nGreen + nYellow ? styles.yellow : styles.red)}
                             height={barHeight}
-                            key={index}
+                            key={keyGenerators.meterBar(index, nBars)}
                             rx={barRounding}
                             ry={barRounding}
                             width={width - 2}
