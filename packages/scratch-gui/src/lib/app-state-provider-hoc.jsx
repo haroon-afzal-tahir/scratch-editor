@@ -32,6 +32,11 @@ export const AppStateProviderHOC = function (WrappedComponent) {
                 isPlayerOnly,
                 showTelemetryModal,
                 isEmbedded,
+                // Strip props that should not be passed to DOM elements
+                colorMode,
+                showNewFeatureCallouts,
+                localesOnly,
+                setTheme,
                 ...componentProps
             } = this.props;
             return (

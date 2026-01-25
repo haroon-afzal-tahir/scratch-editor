@@ -150,6 +150,7 @@ class UpdatePeripheralStep extends React.Component {
                 values={{
                     microBitFirmwareLink: microBitFirmwareUrl,
                     a: microBitFirmwareLink => (<a
+                        key="firmware-link"
                         rel="noopener noreferrer"
                         target="_blank"
                         href={microBitFirmwareLink}

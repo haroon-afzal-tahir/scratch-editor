@@ -137,7 +137,7 @@ const StageHeaderComponent = function (props) {
     } else {
         const stageControls =
             isPlayerOnly ? (
-                []
+                null
             ) : (
                 <div className={styles.stageSizeToggleGroup}>
                     <ToggleButtons

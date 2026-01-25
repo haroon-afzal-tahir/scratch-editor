@@ -683,9 +683,9 @@ class MenuBar extends React.Component {
                                 <MenuBarItemTooltip id="share-button">
                                     <ShareButton className={styles.menuBarButton} />
                                 </MenuBarItemTooltip>
-                            ) : []
+                            ) : null
                         )}
-                        {this.props.canRemix ? remixButton : []}
+                        {this.props.canRemix ? remixButton : null}
                     </div>
                     <div className={classNames(styles.menuBarItem, styles.communityButtonWrapper)}>
                         {this.props.enableCommunity ? (
@@ -709,7 +709,7 @@ class MenuBar extends React.Component {
                             <MenuBarItemTooltip id="community-button">
                                 <CommunityButton className={styles.menuBarButton} />
                             </MenuBarItemTooltip>
-                        ) : [])}
+                        ) : null)}
                     </div>
                     <Divider className={classNames(styles.divider)} />
                     <div className={styles.fileGroup}>
@@ -892,7 +892,7 @@ class MenuBar extends React.Component {
                                         </div>
                                     </MenuBarItemTooltip>
                                 </React.Fragment>
-                            ) : []}
+                            ) : null}
                         </React.Fragment>
                     )}
                 </div>

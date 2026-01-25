@@ -59,6 +59,7 @@ class ComingSoonContent extends React.Component {
                 values={{
                     emoji: (
                         <img
+                            key="emoji"
                             className={styles.comingSoonImage}
                             src={images[imageNumber]}
                         />

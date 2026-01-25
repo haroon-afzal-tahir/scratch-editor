@@ -181,6 +181,7 @@ const alerts = [
                 values={{
                     learnMoreLink: (
                         <FormattedMessage
+                            key="learn-more-text"
                             defaultMessage="Learn more."
                             description="Link text to cloud var faq"
                             id="gui.alerts.cloudInfoLearnMore"
@@ -188,6 +189,7 @@ const alerts = [
                     ),
                     a: learnMoreLink => (
                         <a
+                            key="learn-more-link"
                             href="https://scratch.mit.edu/info/faq/#clouddata"
                             rel="noopener noreferrer"
                             target="_blank"

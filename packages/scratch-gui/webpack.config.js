@@ -132,7 +132,9 @@ const distConfig = baseConfig.clone()
             // (e.g. `/tmp/*path-to-packaged-dist*/static/assets` in scratch-desktop)
             publicPath: 'auto',
             path: path.resolve(__dirname, 'dist')
-        }
+        },
+        // Disable source maps for dist build to prevent Chrome DevTools "illegal path" errors
+        devtool: false
     })
     .addExternals([
         // Use function-based externals to handle all react-related imports
@@ -196,7 +198,9 @@ const distStandaloneConfig = baseConfig.clone()
         },
         output: {
             path: path.resolve(__dirname, 'dist')
-        }
+        },
+        // Disable source maps for dist build to prevent Chrome DevTools "illegal path" errors
+        devtool: false
     });
 
 // build the examples and debugging tools in `build/`

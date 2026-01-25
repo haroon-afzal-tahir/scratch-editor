@@ -40,6 +40,7 @@ const WebGlModal = props => {
                             values={{
                                 webGlLink: (
                                     <FormattedMessage
+                                        key="webgl-link-text"
                                         defaultMessage="does not support WebGL"
                                         description="link part of your browser does not support WebGL message"
                                         id="gui.webglModal.webgllink"
@@ -47,6 +48,7 @@ const WebGlModal = props => {
                                 ),
                                 a: webGlLink => (
                                     <a
+                                        key="webgl-link"
                                         className={styles.faqLink}
                                         href="https://get.webgl.org/"
                                     >
@@ -79,6 +81,7 @@ const WebGlModal = props => {
                             values={{
                                 previewFaqLink: (
                                     <FormattedMessage
+                                        key="faq-link-text"
                                         defaultMessage="FAQ"
                                         description="link to Scratch 3.0 FAQ page"
                                         id="gui.webglModal.previewfaqlinktext"
@@ -86,6 +89,7 @@ const WebGlModal = props => {
                                 ),
                                 a: previewFaqLink => (
                                     <a
+                                        key="faq-link"
                                         className={styles.faqLink}
                                         href="//scratch.mit.edu/3faq"
                                     >

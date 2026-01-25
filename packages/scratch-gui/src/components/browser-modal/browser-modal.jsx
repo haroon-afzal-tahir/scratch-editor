@@ -77,6 +77,7 @@ const BrowserModal = props => {
                             values={{
                                 previewFaqLink: (
                                     <FormattedMessage
+                                        key="faq-link-text"
                                         defaultMessage="FAQ"
                                         description="link to Scratch 3.0 FAQ page"
                                         id="gui.unsupportedBrowser.previewfaqlinktext"
@@ -84,6 +85,7 @@ const BrowserModal = props => {
                                 ),
                                 a: previewFaqLink => (
                                     <a
+                                        key="faq-link"
                                         className={styles.faqLink}
                                         href="//scratch.mit.edu/3faq"
                                     >

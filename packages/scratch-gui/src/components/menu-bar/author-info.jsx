@@ -40,7 +40,7 @@ const AuthorInfo = ({
                         values={{
                             name: username,
                             span: name => (
-                                <span className={styles.username}>
+                                <span key="username" className={styles.username}>
                                     {name}
                                 </span>
                             )
