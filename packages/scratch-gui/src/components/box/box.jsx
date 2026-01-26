@@ -46,8 +46,20 @@ const Box = props => {
         wrap,
         shrink,
         style,
+        // Filter out non-DOM props that should not be spread onto HTML elements
+        colorMode,
+        showNewFeatureCallouts,
+        localesOnly,
+        setTheme,
+        theme,
         ...componentProps
     } = props;
+    // Silence unused variable warnings - these props are intentionally consumed and discarded
+    void colorMode;
+    void showNewFeatureCallouts;
+    void localesOnly;
+    void setTheme;
+    void theme;
     return React.createElement(element, {
         className: classNames(className, styles.box),
         ref: componentRef,
@@ -96,6 +108,7 @@ Box.propTypes = {
     children: PropTypes.node,
     /** Specifies the class name that will be set on this box */
     className: PropTypes.string,
+    colorMode: PropTypes.string,
     /**
      * A callback function whose first parameter is the underlying dom elements.
      * This call back will be executed immediately after the component is mounted or unmounted
@@ -118,6 +131,10 @@ Box.propTypes = {
     justifyContent: PropTypes.oneOf([
         'flex-start', 'flex-end', 'center', 'space-between', 'space-around'
     ]),
+    localesOnly: PropTypes.bool,
+    setTheme: PropTypes.func,
+    theme: PropTypes.string,
+    showNewFeatureCallouts: PropTypes.bool,
     /** Specifies the flex shrink factor of a flex item. */
     shrink: PropTypes.number,
     /** An object whose keys are css property names and whose values correspond the the css property. */
