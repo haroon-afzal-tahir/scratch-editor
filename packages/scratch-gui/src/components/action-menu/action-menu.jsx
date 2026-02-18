@@ -3,95 +3,181 @@ import React from 'react';
 import classNames from 'classnames';
 import bindAll from 'lodash.bindall';
 import ReactTooltip from 'react-tooltip';
+import ReactDOM from 'react-dom';
 import {keyGenerators} from '../../lib/unique-key.js';
 
 import styles from './action-menu.css';
 
 const CLOSE_DELAY = 300; // ms
+const HOVER_PAD = 8; // px of forgiveness around each hit-rect
+
+// Check if a point is inside a rect (with optional padding).
+const pointInRect = (x, y, rect, pad = 0) =>
+    x >= rect.left - pad && x <= rect.right + pad &&
+    y >= rect.top - pad && y <= rect.bottom + pad;
 
 class ActionMenu extends React.Component {
     constructor (props) {
         super(props);
         bindAll(this, [
             'clickDelayer',
-            'handleClosePopover',
-            'handleToggleOpenState',
+            'handleMouseMove',
+            'handleOpenMenu',
             'handleTouchStart',
             'handleTouchOutside',
             'setButtonRef',
-            'setContainerRef'
+            'setContainerRef',
+            'setMoreButtonsRef'
         ]);
         this.state = {
             isOpen: false,
-            forceHide: false
+            forceHide: false,
+            fixedStyle: null
         };
         this.mainTooltipId = `tooltip-${Math.random()}`;
+        this.portalRef = null;
+        this.closeTimeoutId = null;
     }
     componentDidMount () {
-        // Touch start on the main button is caught to trigger open and not click
         this.buttonRef.addEventListener('touchstart', this.handleTouchStart);
-        // Touch start on document is used to trigger close if it is outside
         document.addEventListener('touchstart', this.handleTouchOutside);
     }
     shouldComponentUpdate (newProps, newState) {
-        // This check prevents re-rendering while the project is updating.
-        // @todo check only the state and the title because it is enough to know
-        //  if anything substantial has changed
-        // This is needed because of the sloppy way the props are passed as a new object,
-        //  which should be refactored.
         return newState.isOpen !== this.state.isOpen ||
             newState.forceHide !== this.state.forceHide ||
+            newState.fixedStyle !== this.state.fixedStyle ||
             newProps.title !== this.props.title;
     }
     componentWillUnmount () {
         this.buttonRef.removeEventListener('touchstart', this.handleTouchStart);
         document.removeEventListener('touchstart', this.handleTouchOutside);
+        document.removeEventListener('mousemove', this.handleMouseMove);
+        if (this.closeTimeoutId) {
+            clearTimeout(this.closeTimeoutId);
+        }
     }
-    handleClosePopover () {
-        this.closeTimeoutId = setTimeout(() => {
-            this.setState({isOpen: false});
-            this.closeTimeoutId = null;
-        }, CLOSE_DELAY);
+    /**
+     * Cursor tracker — runs on every mousemove while the menu is open.
+     * Closes the menu only when the cursor has been outside BOTH the
+     * button container AND the portal menu for CLOSE_DELAY ms.
+     */
+    handleMouseMove (e) {
+        if (!this.state.isOpen) return;
+
+        const x = e.clientX;
+        const y = e.clientY;
+
+        // Check both rects individually with a few px of padding
+        // to tolerate sub-pixel gaps / rounding.
+        const containerRect = this.containerRef &&
+            this.containerRef.getBoundingClientRect();
+        const portalRect = this.portalRef &&
+            this.portalRef.getBoundingClientRect();
+
+        let inZone = false;
+        if (containerRect && pointInRect(x, y, containerRect, HOVER_PAD)) {
+            inZone = true;
+        }
+        if (portalRect && pointInRect(x, y, portalRect, HOVER_PAD)) {
+            inZone = true;
+        }
+
+        // Also treat the vertical gap between portal and container as
+        // "in zone" so the cursor can travel between them freely.
+        if (!inZone && containerRect && portalRect) {
+            const minLeft = Math.min(containerRect.left, portalRect.left) - HOVER_PAD;
+            const maxRight = Math.max(containerRect.right, portalRect.right) + HOVER_PAD;
+            const minTop = Math.min(containerRect.top, portalRect.top) - HOVER_PAD;
+            const maxBottom = Math.max(containerRect.bottom, portalRect.bottom) + HOVER_PAD;
+            if (x >= minLeft && x <= maxRight && y >= minTop && y <= maxBottom) {
+                inZone = true;
+            }
+        }
+
+        if (inZone) {
+            if (this.closeTimeoutId) {
+                clearTimeout(this.closeTimeoutId);
+                this.closeTimeoutId = null;
+            }
+        } else if (!this.closeTimeoutId) {
+            this.closeTimeoutId = setTimeout(() => {
+                this.closeTimeoutId = null;
+                // Final safety: check :hover before closing
+                const overContainer = this.containerRef &&
+                    this.containerRef.matches(':hover');
+                const overPortal = this.portalRef &&
+                    this.portalRef.matches(':hover');
+                if (!overContainer && !overPortal) {
+                    this.setState({isOpen: false, fixedStyle: null});
+                    document.removeEventListener('mousemove', this.handleMouseMove);
+                }
+            }, CLOSE_DELAY);
+        }
     }
-    handleToggleOpenState () {
-        // Mouse enter back in after timeout was started prevents it from closing.
+    handleOpenMenu () {
+        // Cancel any pending close
         if (this.closeTimeoutId) {
             clearTimeout(this.closeTimeoutId);
             this.closeTimeoutId = null;
-        } else if (!this.state.isOpen) {
-            this.setState({
-                isOpen: true,
-                forceHide: false
-            });
         }
+
+        // Reuse existing fixedStyle if available (avoids new object →
+        // shouldComponentUpdate sees the same reference → no extra render).
+        let {fixedStyle} = this.state;
+        if (!fixedStyle && this.moreButtonsRef) {
+            const rect = this.moreButtonsRef.getBoundingClientRect();
+            fixedStyle = {
+                position: 'fixed',
+                bottom: `${window.innerHeight - rect.bottom}px`,
+                left: `${rect.left}px`,
+                width: `${rect.width}px`,
+                top: 'auto',
+                margin: 0,
+                zIndex: 45
+            };
+        }
+
+        // Always call setState — if isOpen is already true and fixedStyle
+        // is the same reference, shouldComponentUpdate returns false (no-op).
+        // If a batched close is pending, this overrides it.
+        this.setState({isOpen: true, forceHide: false, fixedStyle});
+
+        // Always ensure the mousemove listener is active
+        // (addEventListener with the same ref is idempotent).
+        document.addEventListener('mousemove', this.handleMouseMove);
     }
     handleTouchOutside (e) {
-        if (this.state.isOpen && !this.containerRef.contains(e.target)) {
-            this.setState({isOpen: false});
+        if (this.state.isOpen &&
+            !this.containerRef.contains(e.target) &&
+            !(this.portalRef && this.portalRef.contains(e.target))) {
+            this.setState({isOpen: false, fixedStyle: null});
+            document.removeEventListener('mousemove', this.handleMouseMove);
+            if (this.closeTimeoutId) {
+                clearTimeout(this.closeTimeoutId);
+                this.closeTimeoutId = null;
+            }
             ReactTooltip.hide();
         }
     }
     clickDelayer (fn) {
-        // Return a wrapped action that manages the menu closing.
-        // @todo we may be able to use react-transition for this in the future
-        // for now all this work is to ensure the menu closes BEFORE the
-        // (possibly slow) action is started.
         return event => {
             ReactTooltip.hide();
             if (fn) fn(event);
-            // Blur the button so it does not keep focus after being clicked
-            // This prevents keyboard events from triggering the button
             this.buttonRef.blur();
-            this.setState({forceHide: true, isOpen: false}, () => {
+            document.removeEventListener('mousemove', this.handleMouseMove);
+            if (this.closeTimeoutId) {
+                clearTimeout(this.closeTimeoutId);
+                this.closeTimeoutId = null;
+            }
+            this.setState({forceHide: true, isOpen: false, fixedStyle: null}, () => {
                 setTimeout(() => this.setState({forceHide: false}));
             });
         };
     }
     handleTouchStart (e) {
-        // Prevent this touch from becoming a click if menu is closed
         if (!this.state.isOpen) {
             e.preventDefault();
-            this.handleToggleOpenState();
+            this.handleOpenMenu();
         }
     }
     setButtonRef (ref) {
@@ -99,6 +185,9 @@ class ActionMenu extends React.Component {
     }
     setContainerRef (ref) {
         this.containerRef = ref;
+    }
+    setMoreButtonsRef (ref) {
+        this.moreButtonsRef = ref;
     }
     render () {
         const {
@@ -110,6 +199,53 @@ class ActionMenu extends React.Component {
             onClick
         } = this.props;
 
+        const usePortal = this.state.isOpen && !this.state.forceHide && this.state.fixedStyle;
+
+        const menuItems = (moreButtons || []).map((buttonProps, keyId) => {
+            const {img, title, onClick: handleClick,
+                fileAccept, fileChange, fileInput, fileMultiple} = buttonProps;
+            const isComingSoon = !handleClick;
+            const hasFileInput = fileInput;
+            const tooltipId = `${this.mainTooltipId}-${title}`;
+            return (
+                <li key={keyGenerators.actionButton(buttonProps, keyId, this.mainTooltipId)}>
+                    <button
+                        aria-label={title}
+                        className={classNames(styles.button, styles.moreButton, {
+                            [styles.comingSoon]: isComingSoon
+                        })}
+                        data-for={tooltipId}
+                        data-tip={title}
+                        onClick={hasFileInput ? handleClick : this.clickDelayer(handleClick)}
+                    >
+                        <img
+                            className={styles.moreIcon}
+                            draggable={false}
+                            src={img}
+                        />
+                        {hasFileInput ? (
+                            <input
+                                accept={fileAccept}
+                                className={styles.fileInput}
+                                multiple={fileMultiple}
+                                ref={fileInput}
+                                type="file"
+                                onChange={fileChange}
+                            />) : null}
+                    </button>
+                    <ReactTooltip
+                        className={classNames(styles.tooltip, {
+                            [styles.comingSoonTooltip]: isComingSoon
+                        })}
+                        effect="solid"
+                        id={tooltipId}
+                        place={tooltipPlace || 'left'}
+                        arrowColor="var(--tooltip-arrow-color)"
+                    />
+                </li>
+            );
+        });
+
         return (
             <div
                 className={classNames(styles.menuContainer, className, {
@@ -117,8 +253,7 @@ class ActionMenu extends React.Component {
                     [styles.forceHidden]: this.state.forceHide
                 })}
                 ref={this.setContainerRef}
-                onMouseEnter={this.handleToggleOpenState}
-                onMouseLeave={this.handleClosePopover}
+                onMouseEnter={this.handleOpenMenu}
             >
                 <button
                     aria-label={mainTitle}
@@ -141,54 +276,40 @@ class ActionMenu extends React.Component {
                     place={tooltipPlace || 'left'}
                     arrowColor="var(--tooltip-arrow-color)"
                 />
-                <div className={styles.moreButtonsOuter}>
-                    <ul className={styles.moreButtons}>
-                        {(moreButtons || []).map((buttonProps, keyId) => {
-                            const {img, title, onClick: handleClick,
-                                fileAccept, fileChange, fileInput, fileMultiple} = buttonProps;
-                            const isComingSoon = !handleClick;
-                            const hasFileInput = fileInput;
-                            const tooltipId = `${this.mainTooltipId}-${title}`;
-                            return (
-                                <li key={keyGenerators.actionButton(buttonProps, keyId, this.mainTooltipId)}>
-                                    <button
-                                        aria-label={title}
-                                        className={classNames(styles.button, styles.moreButton, {
-                                            [styles.comingSoon]: isComingSoon
-                                        })}
-                                        data-for={tooltipId}
-                                        data-tip={title}
-                                        onClick={hasFileInput ? handleClick : this.clickDelayer(handleClick)}
-                                    >
-                                        <img
-                                            className={styles.moreIcon}
-                                            draggable={false}
-                                            src={img}
-                                        />
-                                        {hasFileInput ? (
-                                            <input
-                                                accept={fileAccept}
-                                                className={styles.fileInput}
-                                                multiple={fileMultiple}
-                                                ref={fileInput}
-                                                type="file"
-                                                onChange={fileChange}
-                                            />) : null}
-                                    </button>
-                                    <ReactTooltip
-                                        className={classNames(styles.tooltip, {
-                                            [styles.comingSoonTooltip]: isComingSoon
-                                        })}
-                                        effect="solid"
-                                        id={tooltipId}
-                                        place={tooltipPlace || 'left'}
-                                        arrowColor="var(--tooltip-arrow-color)"
-                                    />
-                                </li>
-                            );
-                        })}
-                    </ul>
+                {/* Always in DOM for measurement via getBoundingClientRect */}
+                <div
+                    className={styles.moreButtonsOuter}
+                    ref={this.setMoreButtonsRef}
+                    style={usePortal ? {visibility: 'hidden', pointerEvents: 'none'} : undefined}
+                >
+                    {!usePortal && (
+                        <ul className={styles.moreButtons}>
+                            {menuItems}
+                        </ul>
+                    )}
                 </div>
+                {usePortal && ReactDOM.createPortal(
+                    <div
+                        className={styles.moreButtonsOuter}
+                        ref={el => { this.portalRef = el; }}
+                        style={{
+                            ...this.state.fixedStyle,
+                            overflow: 'visible'
+                        }}
+                    >
+                        <ul
+                            className={styles.moreButtons}
+                            style={{
+                                maxHeight: '1000px',
+                                overflow: 'visible',
+                                transition: 'none'
+                            }}
+                        >
+                            {menuItems}
+                        </ul>
+                    </div>,
+                    document.body
+                )}
             </div>
         );
     }
@@ -200,11 +321,11 @@ ActionMenu.propTypes = {
     moreButtons: PropTypes.arrayOf(PropTypes.shape({
         img: PropTypes.string,
         title: PropTypes.node.isRequired,
-        onClick: PropTypes.func, // Optional, "coming soon" if no callback provided
-        fileAccept: PropTypes.string, // Optional, only for file upload
-        fileChange: PropTypes.func, // Optional, only for file upload
-        fileInput: PropTypes.func, // Optional, only for file upload
-        fileMultiple: PropTypes.bool // Optional, only for file upload
+        onClick: PropTypes.func,
+        fileAccept: PropTypes.string,
+        fileChange: PropTypes.func,
+        fileInput: PropTypes.func,
+        fileMultiple: PropTypes.bool
     })),
     onClick: PropTypes.func.isRequired,
     title: PropTypes.node.isRequired,

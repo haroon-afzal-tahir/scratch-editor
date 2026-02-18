@@ -79,6 +79,7 @@
 .add-button {
     position: absolute;
     bottom: 0.75rem;
+    z-index: $z-index-add-button;
 }
 
 [dir="ltr"] .add-button {

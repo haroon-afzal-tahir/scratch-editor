@@ -46,7 +46,8 @@ button::-moz-focus-inner {
     width: $main-button-size;
     height: $main-button-size;
     box-shadow: 0 0 0 4px $looks-transparent;
-    z-index: $z-index-add-button;
+    position: relative;
+    z-index: 2;
     transition: transform, box-shadow 0.5s;
 }
 
@@ -84,6 +85,7 @@ button::-moz-focus-inner {
 
     margin-bottom: calc($main-button-size / -2);
     padding-bottom: calc($main-button-size / 2);
+    z-index: 1;
 }
 
 .more-buttons {
@@ -92,8 +94,8 @@ button::-moz-focus-inner {
     overflow-x: visible;
     display: flex;
     flex-direction: column;
-    z-index: 10; /* @todo justify */
-    
+    position: relative;
+
     margin: 0;
     padding: 0;
     list-style-type: none;
