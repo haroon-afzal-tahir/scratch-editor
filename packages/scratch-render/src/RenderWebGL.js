@@ -676,6 +676,7 @@ class RenderWebGL extends EventEmitter {
      */
     getBounds (drawableID) {
         const drawable = this._allDrawables[drawableID];
+        if (!drawable || !drawable.skin) return null;
         // Tell the Drawable about its updated convex hull, if necessary.
         if (drawable.needsConvexHullPoints()) {
             const points = this._getConvexHullPointsForDrawable(drawableID);
@@ -709,6 +710,7 @@ class RenderWebGL extends EventEmitter {
      */
     getBoundsForBubble (drawableID) {
         const drawable = this._allDrawables[drawableID];
+        if (!drawable || !drawable.skin) return null;
         // Tell the Drawable about its updated convex hull, if necessary.
         if (drawable.needsConvexHullPoints()) {
             const points = this._getConvexHullPointsForDrawable(drawableID);
@@ -741,6 +743,7 @@ class RenderWebGL extends EventEmitter {
      */
     getCurrentSkinSize (drawableID) {
         const drawable = this._allDrawables[drawableID];
+        if (!drawable || !drawable.skin) return [0, 0];
         return this.getSkinSize(drawable.skin.id);
     }
 
@@ -1571,7 +1574,7 @@ class RenderWebGL extends EventEmitter {
         let y = position[1];
 
         const drawable = this._allDrawables[drawableID];
-        if (!drawable) {
+        if (!drawable || !drawable._skin) {
             // @todo(https://github.com/LLK/scratch-vm/issues/2288) fix whatever's wrong in the VM which causes this, then add a warning or throw here.
             // Right now this happens so much on some projects that a warning or exception here can hang the browser.
             return [x, y];
@@ -1870,6 +1873,7 @@ class RenderWebGL extends EventEmitter {
      */
     _getConvexHullPointsForDrawable (drawableID) {
         const drawable = this._allDrawables[drawableID];
+        if (!drawable || !drawable.skin) return [];
 
         const [width, height] = drawable.skin.size;
         // No points in the hull if invisible or size is 0.
