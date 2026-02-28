@@ -268,7 +268,14 @@ class RenderedTarget extends Target {
         const oldX = this.x;
         const oldY = this.y;
         if (this.renderer) {
-            const position = this.renderer.getFencedPositionOfDrawable(this.drawableID, [x, y]);
+            // Guard: skip fencing if drawable or skin isn't ready yet (e.g. during remote sprite creation)
+            const drawable = this.renderer._allDrawables && this.renderer._allDrawables[this.drawableID];
+            let position;
+            if (!drawable || !drawable._skin) {
+                position = [x, y];
+            } else {
+                position = this.renderer.getFencedPositionOfDrawable(this.drawableID, [x, y]);
+            }
             this.x = position[0];
             this.y = position[1];
 

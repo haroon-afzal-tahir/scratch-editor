@@ -528,7 +528,7 @@ class RenderWebGL extends EventEmitter {
     }
 
     get _visibleDrawList () {
-        return this._drawList.filter(id => this._allDrawables[id]._visible);
+        return this._drawList.filter(id => this._allDrawables[id] && this._allDrawables[id]._visible);
     }
 
     // Given a layer group, return the index where it ends (non-inclusive),
@@ -552,6 +552,7 @@ class RenderWebGL extends EventEmitter {
             return;
         }
         const drawable = this._allDrawables[drawableID];
+        if (!drawable) return;
         drawable.dispose();
         delete this._allDrawables[drawableID];
 
@@ -807,6 +808,7 @@ class RenderWebGL extends EventEmitter {
         }
 
         const drawable = this._allDrawables[drawableID];
+        if (!drawable) return false;
         const point = __isTouchingDrawablesPoint;
         const color = __touchingColor;
         const hasMask = Boolean(mask3b);
@@ -970,16 +972,17 @@ class RenderWebGL extends EventEmitter {
     isTouchingDrawables (drawableID, candidateIDs = this._drawList) {
         const candidates = this._candidatesTouching(drawableID,
             // even if passed an invisible drawable, we will NEVER touch it!
-            candidateIDs.filter(id => this._allDrawables[id]._visible));
+            candidateIDs.filter(id => this._allDrawables[id] && this._allDrawables[id]._visible));
         // if we are invisble we don't touch anything.
-        if (candidates.length === 0 || !this._allDrawables[drawableID]._visible) {
+        const thisDrawable = this._allDrawables[drawableID];
+        if (candidates.length === 0 || !thisDrawable || !thisDrawable._visible) {
             return false;
         }
 
         // Get the union of all the candidates intersections.
         const bounds = this._candidatesBounds(candidates);
 
-        const drawable = this._allDrawables[drawableID];
+        const drawable = thisDrawable;
         const point = __isTouchingDrawablesPoint;
 
         drawable.updateCPURenderAttributes();
@@ -1137,6 +1140,7 @@ class RenderWebGL extends EventEmitter {
 
         candidateIDs = (candidateIDs || this._drawList).filter(id => {
             const drawable = this._allDrawables[id];
+            if (!drawable) return false;
             // default pick list ignores visible and ghosted sprites.
             if (drawable.getVisible() && drawable.getUniforms().u_ghost !== 0) {
                 const drawableBounds = drawable.getFastBounds();
@@ -1375,6 +1379,7 @@ class RenderWebGL extends EventEmitter {
      */
     _touchingBounds (drawableID) {
         const drawable = this._allDrawables[drawableID];
+        if (!drawable) return null;
 
         /** @todo remove this once URL-based skin setting is removed. */
         if (!drawable.skin || !drawable.skin.getTexture([100, 100])) return null;
@@ -1413,9 +1418,10 @@ class RenderWebGL extends EventEmitter {
             const id = candidateIDs[index];
             if (id !== drawableID) {
                 const drawable = this._allDrawables[id];
+                if (!drawable || !drawable.skin) continue;
                 // Text bubbles aren't considered in "touching" queries
                 if (drawable.skin instanceof TextBubbleSkin) continue;
-                if (drawable.skin && drawable._visible) {
+                if (drawable._visible) {
                     // Update the CPU position data
                     drawable.updateCPURenderAttributes();
                     const candidateBounds = drawable.getFastBounds();
@@ -1804,6 +1810,7 @@ class RenderWebGL extends EventEmitter {
             if (opts.filter && !opts.filter(drawableID)) continue;
 
             const drawable = this._allDrawables[drawableID];
+            if (!drawable) continue;
             /** @todo check if drawable is inside the viewport before anything else */
 
             // Hidden drawables (e.g., by a "hide" block) are not drawn unless
