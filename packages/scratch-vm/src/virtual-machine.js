@@ -1367,8 +1367,12 @@ class VirtualMachine extends EventEmitter {
      * of the current editing target's blocks.
      */
     emitWorkspaceUpdate () {
+        // Guard: stage or editingTarget may not exist yet during collab sync
+        const stage = this.runtime.getTargetForStage();
+        if (!stage || !this.editingTarget) return;
+
         // Create a list of broadcast message Ids according to the stage variables
-        const stageVariables = this.runtime.getTargetForStage().variables;
+        const stageVariables = stage.variables;
         let messageIds = [];
         for (const varId in stageVariables) {
             if (stageVariables[varId].type === Variable.BROADCAST_MESSAGE_TYPE) {
@@ -1394,9 +1398,9 @@ class VirtualMachine extends EventEmitter {
         // Anything left in messageIds is not referenced by a block, so delete it.
         for (let i = 0; i < messageIds.length; i++) {
             const id = messageIds[i];
-            delete this.runtime.getTargetForStage().variables[id];
+            delete stage.variables[id];
         }
-        const globalVarMap = Object.assign({}, this.runtime.getTargetForStage().variables);
+        const globalVarMap = Object.assign({}, stage.variables);
         const localVarMap = this.editingTarget.isStage ?
             Object.create(null) :
             Object.assign({}, this.editingTarget.variables);
